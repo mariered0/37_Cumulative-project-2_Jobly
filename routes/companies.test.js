@@ -30,7 +30,7 @@ describe("POST /companies", function () {
     numEmployees: 10,
   };
 
-  test("ok for users", async function () {
+  test("ok for users with admin flag", async function () {
     const resp = await request(app)
         .post("/companies")
         .send(newCompany)
@@ -204,7 +204,7 @@ describe("GET /companies/:handle", function () {
 /************************************** PATCH /companies/:handle */
 
 describe("PATCH /companies/:handle", function () {
-  test("works for users", async function () {
+  test("works for users with admin flag", async function () {
     const resp = await request(app)
         .patch(`/companies/c1`)
         .send({
@@ -260,12 +260,23 @@ describe("PATCH /companies/:handle", function () {
         .set("authorization", `Bearer ${u1Token}`);
     expect(resp.statusCode).toEqual(400);
   });
+
+  test("request with none-admin user", async function () {
+    const resp = await request(app)
+        .patch(`/companies/c1`)
+        .send({
+          name: "C1-new",
+        })
+        .set("authorization", `Bearer ${u2Token}`);
+    expect(resp.statusCode).toEqual(401);
+    expect(resp.body).toEqual({"error": {"message": "Unauthorized", "status": 401}})
+    });
 });
 
 /************************************** DELETE /companies/:handle */
 
 describe("DELETE /companies/:handle", function () {
-  test("works for users", async function () {
+  test("works for users with admin flag", async function () {
     const resp = await request(app)
         .delete(`/companies/c1`)
         .set("authorization", `Bearer ${u1Token}`);
@@ -284,4 +295,12 @@ describe("DELETE /companies/:handle", function () {
         .set("authorization", `Bearer ${u1Token}`);
     expect(resp.statusCode).toEqual(404);
   });
+
+  test("request with none-admin user", async function () {
+    const resp = await request(app)
+        .delete(`/companies/c1`)
+        .set("authorization", `Bearer ${u2Token}`);
+    expect(resp.statusCode).toEqual(401);
+    expect(resp.body).toEqual({"error": {"message": "Unauthorized", "status": 401}})
+    });
 });
