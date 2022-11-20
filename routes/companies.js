@@ -71,7 +71,7 @@ router.get("/", async function (req, res, next) {
             minEmployees = 0;
 
           }else{
-            //either minEmp is specified or not, run this
+            //regardless minEmp is specified or not, run this
           const companies = await Company.filterByName(`${nameLike}`);
           const results = companies.filter(function (c) {
             return c.numEmployees >= minEmployees && c.numEmployees <= maxEmployees
