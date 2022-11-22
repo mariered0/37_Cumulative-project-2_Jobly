@@ -5,6 +5,7 @@ const request = require("supertest");
 const db = require("../db.js");
 const app = require("../app");
 const User = require("../models/user");
+const Job = require("../models/job");
 
 const {
   commonBeforeAll,
@@ -368,3 +369,60 @@ describe("DELETE /users/:username", function () {
     expect(resp.body).toEqual({"error": {"message": "Unauthorized", "status": 401}});
   });
 });
+
+/************************************** POST /users/[username]/jobs/[id] */
+
+describe("POST /users/:username/jobs/:id", () => {
+  test("works for users themselves", async () => {
+    const job = await Job.filterByTitle('j1');
+    const jobId = job[0].id;
+
+    const resp = await request(app)
+        .post(`/users/u2/jobs/${jobId}`)
+        .set("authorization", `Bearer ${u2Token}`);
+    expect(resp.body).toEqual({
+      applied: jobId
+    });
+  })
+
+  test("works for admin", async function () {
+    const job = await Job.filterByTitle('j1');
+    const jobId = job[0].id;
+
+    const resp = await request(app)
+        .post(`/users/u2/jobs/${jobId}`)
+        .set("authorization", `Bearer ${u2Token}`);
+    expect(resp.body).toEqual({
+      applied: jobId
+    });
+  });
+
+  test("unauth for anon", async function () {
+    const job = await Job.filterByTitle('j1');
+    const jobId = job[0].id;
+
+    const resp = await request(app)
+    .post(`/users/u2/jobs/${jobId}`)
+    expect(resp.statusCode).toEqual(401);
+  });
+
+  test("not found if user missing", async function () {
+    const job = await Job.filterByTitle('j1');
+    const jobId = job[0].id;
+
+    const resp = await request(app)
+        .post(`/users/u99999/jobs/${jobId}`)
+        .set("authorization", `Bearer ${u2Token}`);
+    expect(resp.statusCode).toEqual(404);
+  });
+
+  test("returns error for users not themselves nor admin", async function () {
+    const job = await Job.filterByTitle('j1');
+    const jobId = job[0].id;
+
+    const resp = await request(app)
+    .post(`/users/u1/jobs/${jobId}`)
+    .set("authorization", `Bearer ${u2Token}`);
+    expect(resp.statusCode).toEqual(401);
+  });
+})

@@ -10,6 +10,7 @@ async function commonBeforeAll() {
   await db.query("DELETE FROM users");
   // noinspection SqlWithoutWhere
   await db.query("DELETE FROM jobs");
+  await db.query("DELETE FROM applications")
 
   await db.query(`
     INSERT INTO companies(handle, name, num_employees, description, logo_url)
@@ -40,6 +41,24 @@ async function commonBeforeAll() {
                ('j2', 888888, 0, 'c2'),
                ('j3', 777777, 0, 'c3')
         RETURNING title`);
+
+  // const id1 = await db.query(
+  //         `SELECT id, title
+  //          FROM jobs
+  //          WHERE title ILIKE '%j1%'`
+  //     );
+  // const id2 = await db.query(
+  //         `SELECT id, title
+  //          FROM jobs
+  //          WHERE title ILIKE '%j2%'`
+  //     );
+
+  // await db.query(`
+  //       INSERT INTO applications(username,
+  //                               job_id)
+  //       VALUES ('u1', ${id1.rows[0].id}),
+  //              ('u2', ${id2.rows[0].id})
+  //       RETURNING job_id`);
 }
 
 async function commonBeforeEach() {

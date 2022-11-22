@@ -15,7 +15,10 @@ describe("sqlForPartialUpdate function", () => {
           };
 
         const res = sqlForPartialUpdate(updateData, jsToSql);
-        expect(res['values']).toContain('NewF');
+        expect(res).toEqual({
+          setCols: "\"first_name\"=$1",
+          values: ["NewF"]
+        });
     });
 
     test("invalid dataToUpdate", () => {

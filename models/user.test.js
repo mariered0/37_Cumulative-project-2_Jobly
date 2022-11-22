@@ -7,6 +7,7 @@ const {
 } = require("../expressError");
 const db = require("../db.js");
 const User = require("./user.js");
+const Job = require("./job.js");
 const {
   commonBeforeAll,
   commonBeforeEach,
@@ -228,3 +229,36 @@ describe("remove", function () {
     }
   });
 });
+
+
+/************************************** apply */
+
+describe("apply", () => {
+  // test("works", async () => {
+  //   const job = await Job.filterByTitle('j1');
+  //   const jobId = job[0].id;
+  //   const res = await User.apply("u1", jobId);
+  //   expect(res).toEqual(jobId)
+  // })
+
+  test("not found if no such user", async () => {
+    try{
+      const job = await Job.filterByTitle('j1');
+      const jobId = job[0].id;
+      await User.apply("u5", jobId);
+      fail();
+    }catch (err) {
+      expect(err instanceof NotFoundError).toBeTruthy();
+    }
+  })
+
+  test("not found if no such job", async () => {
+    try{
+      await User.apply("u1", 9999999);
+      fail();
+    }catch (err) {
+      expect(err instanceof NotFoundError).toBeTruthy();
+    }
+  })
+
+})

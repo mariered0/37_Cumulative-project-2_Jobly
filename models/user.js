@@ -98,7 +98,8 @@ class User {
 
   /** Find all users.
    *
-   * Returns [{ username, first_name, last_name, email, is_admin }, ...]
+   * Returns [{ username, first_name, last_name, email, is_admin, jobs: [jobId, jobId, ] }, ...]
+   * jobs should include jobIds of jobs that the user has applied to.
    **/
 
   static async findAll() {
@@ -109,8 +110,25 @@ class User {
                   email,
                   is_admin AS "isAdmin"
            FROM users
-           ORDER BY username`,
+           ORDER BY username`
     );
+
+    // const result = await db.query(`
+    //       SELECT u.username,
+    //               u.first_name AS "firstName",
+    //               u.last_name AS "lastName",
+    //               u.email,
+    //               u.is_admin AS "isAdmin"
+    //               a.job_id
+    //       FROM users AS u
+    //       JOIN applications AS a
+    //       ON a.username = u.username
+    //       ORDER BY username`
+    // );
+    // console.log('with jobs', result)
+
+
+
 
     return result.rows;
   }
@@ -203,6 +221,23 @@ class User {
     const user = result.rows[0];
 
     if (!user) throw new NotFoundError(`No user: ${username}`);
+  }
+
+  /** Apply to a job for the user */
+
+  static async apply(username, jobId) {
+    const result = await db.query(`
+      INSERT INTO applications(username, job_id)
+      VALUES ($1, $2)
+      RETURNING username, job_id AS jobId`,
+    [username, jobId]);
+
+    const job = result.rows[0];
+    console.log(job);
+
+    if(!job) throw new NotFoundError(`No user ${username} or ${jobId}`);
+
+    return job.jobid;
   }
 }
 

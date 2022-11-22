@@ -129,42 +129,6 @@ describe("filterByName", () => {
   });
 });
 
-/************************************** filterByMinEmployees */
-
-// describe("filterByMinEmployees", () => {
-//   test("works", async () => {
-//     const companies = await Company.filterByMinEmployees(1);
-//     expect(companies).toHaveLength(1);
-//   });
-
-//   test("not found error if no company with the condition", async () => {
-//     try {
-//       await Company.filterByMinEmployees(0);
-//       fail();
-//     } catch (err) {
-//       expect(err instanceof NotFoundError).toBeTruthy();
-//     }
-//   });
-// });
-
-/************************************** filterByMaxEmployees */
-
-// describe("filterByMaxEmployees", () => {
-//   test("works", async () => {
-//     const companies = await Company.filterByMaxEmployees(3);
-//     expect(companies).toHaveLength(1);
-//   });
-
-//   test("not found error if no company with the condition", async () => {
-//     try {
-//       await Company.filterByMaxEmployees(4);
-//       fail();
-//     } catch (err) {
-//       expect(err instanceof NotFoundError).toBeTruthy();
-//     }
-//   });
-// });
-
 
 /************************************** update */
 
