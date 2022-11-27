@@ -13,7 +13,8 @@ const {
   commonAfterEach,
   commonAfterAll,
   u1Token,
-  u2Token
+  u2Token,
+  testJobIds
 } = require("./_testCommon");
 
 beforeAll(commonBeforeAll);
@@ -374,54 +375,39 @@ describe("DELETE /users/:username", function () {
 
 describe("POST /users/:username/jobs/:id", () => {
   test("works for users themselves", async () => {
-    const job = await Job.filterByTitle('j1');
-    const jobId = job[0].id;
-
     const resp = await request(app)
-        .post(`/users/u2/jobs/${jobId}`)
+        .post(`/users/u2/jobs/${testJobIds[2]}`)
         .set("authorization", `Bearer ${u2Token}`);
     expect(resp.body).toEqual({
-      applied: jobId
+      applied: testJobIds[2]
     });
   })
 
   test("works for admin", async function () {
-    const job = await Job.filterByTitle('j1');
-    const jobId = job[0].id;
-
     const resp = await request(app)
-        .post(`/users/u2/jobs/${jobId}`)
+        .post(`/users/u2/jobs/${testJobIds[2]}`)
         .set("authorization", `Bearer ${u2Token}`);
     expect(resp.body).toEqual({
-      applied: jobId
+      applied: testJobIds[2]
     });
   });
 
   test("unauth for anon", async function () {
-    const job = await Job.filterByTitle('j1');
-    const jobId = job[0].id;
-
     const resp = await request(app)
-    .post(`/users/u2/jobs/${jobId}`)
+    .post(`/users/u2/jobs/${testJobIds[0]}`)
     expect(resp.statusCode).toEqual(401);
   });
 
   test("not found if user missing", async function () {
-    const job = await Job.filterByTitle('j1');
-    const jobId = job[0].id;
-
     const resp = await request(app)
-        .post(`/users/u99999/jobs/${jobId}`)
-        .set("authorization", `Bearer ${u2Token}`);
+        .post(`/users/u99999/jobs/${testJobIds[0]}`)
+        .set("authorization", `Bearer ${u1Token}`);
     expect(resp.statusCode).toEqual(404);
   });
 
   test("returns error for users not themselves nor admin", async function () {
-    const job = await Job.filterByTitle('j1');
-    const jobId = job[0].id;
-
     const resp = await request(app)
-    .post(`/users/u1/jobs/${jobId}`)
+    .post(`/users/u1/jobs/${testJobIds[0]}`)
     .set("authorization", `Bearer ${u2Token}`);
     expect(resp.statusCode).toEqual(401);
   });

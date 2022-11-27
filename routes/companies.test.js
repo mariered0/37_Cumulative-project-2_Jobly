@@ -10,6 +10,7 @@ const {
   commonBeforeEach,
   commonAfterEach,
   commonAfterAll,
+  testJobIds,
   u1Token,
   u2Token
 } = require("./_testCommon");
@@ -109,7 +110,7 @@ describe("GET /companies", function () {
   test("nameLike, minEmployees, maxEmployees are specified in query", async () => {
     const resp = await request(app)
         .get('/companies/')
-        .query({ nameLike: "c", minEmployees: 3, maxEmployees: 3 })
+        .query({ name: "c", minEmployees: 3, maxEmployees: 3 })
         .set('authorization', `Bearer ${u1Token}`);
     expect(resp.body).toEqual({
       companies :[{
@@ -178,6 +179,11 @@ describe("GET /companies/:handle", function () {
         description: "Desc1",
         numEmployees: 1,
         logoUrl: "http://c1.img",
+        jobs: [
+          { id: testJobIds[0], title: "j1", equity: "0.1", salary: 999999 },
+          { id: testJobIds[1], title: "j2", equity: "0.2", salary: 888888 },
+          { id: testJobIds[2], title: "j3", equity: null, salary: 777777 }
+        ],
       },
     });
   });
@@ -191,6 +197,7 @@ describe("GET /companies/:handle", function () {
         description: "Desc2",
         numEmployees: 2,
         logoUrl: "http://c2.img",
+        jobs: [],
       },
     });
   });

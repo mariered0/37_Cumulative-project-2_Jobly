@@ -226,18 +226,33 @@ class User {
   /** Apply to a job for the user */
 
   static async apply(username, jobId) {
+    const preCheck = await db.query(
+      `SELECT id
+       FROM jobs
+       WHERE id = $1`, [jobId]);
+    const job = preCheck.rows[0];
+
+    if (!job) throw new NotFoundError(`No such job: ${jobId}`);
+
+    const preCheck2 = await db.query(
+      `SELECT username
+       FROM users
+       WHERE username = $1`, [username]);
+    const user = preCheck2.rows[0];
+
+    if (!user) throw new NotFoundError(`No such username: ${username}`);
+    
     const result = await db.query(`
       INSERT INTO applications(username, job_id)
       VALUES ($1, $2)
       RETURNING username, job_id AS jobId`,
     [username, jobId]);
 
-    const job = result.rows[0];
-    console.log(job);
+    const jobApplied = result.rows[0];
 
     if(!job) throw new NotFoundError(`No user ${username} or ${jobId}`);
 
-    return job.jobid;
+    return jobApplied.jobid;
   }
 }
 

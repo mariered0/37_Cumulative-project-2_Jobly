@@ -2,9 +2,9 @@
 
 const request = require("supertest");
 
-const db = require("../db");
+
 const app = require("../app");
-const Job = require("../models/job");
+
 
 const {
   commonBeforeAll,
@@ -12,7 +12,8 @@ const {
   commonAfterEach,
   commonAfterAll,
   u1Token,
-  u2Token
+  u2Token,
+  testJobIds,
 } = require("./_testCommon");
 
 beforeAll(commonBeforeAll);
@@ -35,7 +36,7 @@ describe("POST /jobs", function () {
         .post("/jobs")
         .send(newJob)
         .set("authorization", `Bearer ${u1Token}`);
-    // expect(resp.statusCode).toEqual(201);
+    expect(resp.statusCode).toEqual(201);
     expect(resp.body).toEqual({
       job: {
         id: expect.any(Number),
@@ -92,64 +93,74 @@ describe("GET /jobs", () => {
           id: expect.any(Number),
           title: "j1",
           salary: 999999,
-          equity: '1',
-          companyHandle: "c1"
+          equity: '0.1',
+          companyHandle: "c1",
+          companyName: "C1"
         },
         {
           id: expect.any(Number),
           title: "j2",
           salary: 888888,
-          equity: '0',
-          companyHandle: "c2"
+          equity: '0.2',
+          companyHandle: "c1",
+          companyName: "C1"
         },
         {
           id: expect.any(Number),
           title: "j3",
           salary: 777777,
-          equity: '0',
-          companyHandle: "c3"
+          equity: null,
+          companyHandle: "c1",
+          companyName: "C1"
         }
       ]
     })
   })
 
-  test("titleLike, minSalary, hasEquity = true are specified in query", async () => {
+  test("works: filtering", async () => {
     const resp = await request(app)
-      .get('/jobs/')
-      .query({ titleLike: "j", minSalary: 999999, hasEquity: true })
-      .set('authorization', `Bearer ${u1Token}`);
+        .get(`/jobs`)
+        .query({ hasEquity: true });
     expect(resp.body).toEqual({
-      jobs: [{
-        id: expect.any(Number),
-        title: 'j1',
-        salary: 999999,
-        equity: '1',
-        companyHandle: 'c1'
-      }]
-    })
+          jobs: [
+            {
+              id: expect.any(Number),
+              title: "j1",
+              salary: 999999,
+              equity: "0.1",
+              companyHandle: "c1",
+              companyName: "C1",
+            },
+            {
+              id: expect.any(Number),
+              title: "j2",
+              salary: 888888,
+              equity: "0.2",
+              companyHandle: "c1",
+              companyName: "C1",
+            },
+          ],
+        },
+    );
   })
 
-  test("titleLike and minSalary are specified in query", async () => {
+  test("works: filtering on 2 filters", async function () {
     const resp = await request(app)
-      .get('/jobs/')
-      .query({ titleLike: "j", minSalary: 888888 })
-      .set('authorization', `Bearer ${u1Token}`);
+        .get(`/jobs`)
+        .query({ minSalary: 2, title: "3" });
     expect(resp.body).toEqual({
-      jobs: [{
-        id: expect.any(Number),
-        title: 'j1',
-        salary: 999999,
-        equity: '1',
-        companyHandle: 'c1'
-      },
-      {
-        id: expect.any(Number),
-        title: 'j2',
-        salary: 888888,
-        equity: '0',
-        companyHandle: 'c2'
-      }]
-    })
+          jobs: [
+            {
+              id: expect.any(Number),
+              title: "j3",
+              salary: 777777,
+              equity: null,
+              companyHandle: "c1",
+              companyName: "C1",
+            },
+          ],
+        },
+    );
   });
 
   test("only minSalary is specified in query", async () => {
@@ -162,21 +173,18 @@ describe("GET /jobs", () => {
         id: expect.any(Number),
         title: 'j1',
         salary: 999999,
-        equity: '1',
-        companyHandle: 'c1'
+        equity: '0.1',
+        companyHandle: 'c1',
+        companyName: "C1"
       }]
     })
   })
 
-  test("fails: test next() handler", async function () {
-    // there's no normal failure event which will cause this route to fail ---
-    // thus making it hard to test that the error-handler works with it. This
-    // should cause an error, all right :)
-    await db.query("DROP TABLE jobs CASCADE");
+  test("bad request on invalid filter key", async function () {
     const resp = await request(app)
-        .get("/jobs")
-        .set("authorization", `Bearer ${u1Token}`);
-    expect(resp.statusCode).toEqual(500);
+        .get(`/jobs`)
+        .query({ minSalary: 888888, nope: "nope" });
+    expect(resp.statusCode).toEqual(400);
   });
 
 })
@@ -185,20 +193,23 @@ describe("GET /jobs", () => {
 
 describe("GET /jobs/:id", () => {
   test("works for anon", async () => {
-    const job = await Job.filterByTitle("j1");
-    const resp = await request(app).get(`/jobs/${job[0].id}`);
+    const resp = await request(app).get(`/jobs/${testJobIds[0]}`);
     expect(resp.body).toEqual({
       job: {
-        id: expect.any(Number),
+        id: testJobIds[0],
         title: "j1",
         salary: 999999,
-        equity: '1',
-        companyHandle: "c1"
+        equity: '0.1',
+        company: {
+          handle: "c1",
+          name: "C1",
+          description: "Desc1",
+          numEmployees: 1,
+          logoUrl: "http://c1.img"
+        }
       }
     });
   });
-
-  // test("works for anon: job w/o application?")
 
   test("not found for no such job", async () => {
     const resp = await request(app).get(`/jobs/9999`);
@@ -211,28 +222,26 @@ describe("GET /jobs/:id", () => {
 
 describe("PATCH /jobs/:id", () => {
   test("works for users with admin flag", async () => {
-    const job = await Job.filterByTitle("j1");
     const resp = await request(app)
-    .patch(`/jobs/${job[0].id}`)
+    .patch(`/jobs/${testJobIds[0]}`)
     .send({
       title: "Updated"
     })
     .set("authorization", `Bearer ${u1Token}`);
   expect(resp.body).toEqual({
     job: {
-      id: job[0].id,
+      id: testJobIds[0],
       title: "Updated",
       salary: 999999,
-      equity: '1',
+      equity: '0.1',
       companyHandle: "c1"
     }
   });
   });
 
   test("unauth for anon", async () =>  {
-    const job = await Job.filterByTitle("j1");
     const resp = await request(app)
-        .patch(`/jobs/${job[0].id}`)
+        .patch(`/jobs/${testJobIds[0]}`)
         .send({
           title: "J1-new",
         });
@@ -250,9 +259,8 @@ describe("PATCH /jobs/:id", () => {
   });
 
   test("bad request on invalid data", async function () {
-    const job = await Job.filterByTitle("j1");
     const resp = await request(app)
-        .patch(`/jobs/${job[0].id}`)
+        .patch(`/jobs/${testJobIds[0]}`)
         .send({
           salary: "invalid" 
         })
@@ -261,9 +269,8 @@ describe("PATCH /jobs/:id", () => {
   });
 
   test("request with none-admin user", async function () {
-    const job = await Job.filterByTitle("j1");
     const resp = await request(app)
-        .patch(`/jobs/${job[0].id}`)
+        .patch(`/jobs/${testJobIds[0]}`)
         .send({
           name: "C1-new",
         })
@@ -278,17 +285,15 @@ describe("PATCH /jobs/:id", () => {
 
 describe("DELETE /jobs/:id", function () {
   test("works for users with admin flag", async function () {
-    const job = await Job.filterByTitle("j1");
     const resp = await request(app)
-        .delete(`/jobs/${job[0].id}`)
+        .delete(`/jobs/${testJobIds[0]}`)
         .set("authorization", `Bearer ${u1Token}`);
-    expect(resp.body).toEqual({ deleted: `${job[0].id}` });
+    expect(resp.body).toEqual({ deleted: `${testJobIds[0]}` });
   });
 
   test("unauth for anon", async function () {
-    const job = await Job.filterByTitle("j1");
     const resp = await request(app)
-        .delete(`/jobs/${job[0].id}`);
+        .delete(`/jobs/${testJobIds[0]}`);
     expect(resp.statusCode).toEqual(401);
   });
 
@@ -300,9 +305,8 @@ describe("DELETE /jobs/:id", function () {
   });
 
   test("request with none-admin user", async function () {
-    const job = await Job.filterByTitle("j1");
     const resp = await request(app)
-        .delete(`/jobs/${job[0].id}`)
+        .delete(`/jobs/${testJobIds[0]}`)
         .set("authorization", `Bearer ${u2Token}`);
     expect(resp.statusCode).toEqual(401);
     expect(resp.body).toEqual({"error": {"message": "Unauthorized", "status": 401}})

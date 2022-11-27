@@ -12,6 +12,7 @@ const Company = require("../models/company");
 
 const companyNewSchema = require("../schemas/companyNew.json");
 const companyUpdateSchema = require("../schemas/companyUpdate.json");
+const companySearchSchema = require("../schemas/companySearch.json");
 const db = require("../db");
 
 const router = new express.Router();
@@ -52,75 +53,99 @@ router.post("/", ensureLoggedIn, ensureAdmin, async function (req, res, next) {
  * Authorization required: none
  */
 
-router.get("/", async function (req, res, next) {
-  try {
+// router.get("/", async function (req, res, next) {
+//   try {
     //check if there's any query strings, if not, send all companies information
-    if (Object.keys(req.query).length !== 0){
-      const { nameLike } = req.query
-      let { minEmployees, maxEmployees } = req.query
+    // if (Object.keys(req.query).length !== 0){
+    //   const { nameLike } = req.query
+    //   let { minEmployees, maxEmployees } = req.query
 
-      if (minEmployees > maxEmployees){
-        throw new BadRequestError('minEmployees number must be smaller than maxEmployees number');
-      }
+    //   if (minEmployees > maxEmployees){
+    //     throw new BadRequestError('minEmployees number must be smaller than maxEmployees number');
+    //   }
       
       //Check if nameLike is specified in query string:
-      if (nameLike !== undefined){
+      // if (nameLike !== undefined){
         //if nameLike is specified:
         //Check if maxEmployees is specified
-        if(maxEmployees !== undefined){
-          if(minEmployees == undefined){
-            minEmployees = 0;
+        // if(maxEmployees !== undefined){
+        //   if(minEmployees == undefined){
+        //     minEmployees = 0;
 
-          }else{
+        //   }else{
             //regardless minEmp is specified or not, run this
-          const companies = await Company.filterByName(`${nameLike}`);
-          const results = companies.filter(function (c) {
-            return c.numEmployees >= minEmployees && c.numEmployees <= maxEmployees
-          })
-          return res.json({ companies: results });
-          }
-        }
+        //   const companies = await Company.filterByName(`${nameLike}`);
+        //   const results = companies.filter(function (c) {
+        //     return c.numEmployees >= minEmployees && c.numEmployees <= maxEmployees
+        //   })
+        //   return res.json({ companies: results });
+        //   }
+        // }
         //if maxEmployees is not specified (=== undefined), filter with namelike & minEmp
-        else{
-          const companies = await Company.filterByName(`${nameLike}`);
-          const results = companies.filter(function (c) {
-            return c.numEmployees >= minEmployees
-        })
-          return res.json({ companies: results });
-        }
-      }
-      else{
+      //   else{
+      //     const companies = await Company.filterByName(`${nameLike}`);
+      //     const results = companies.filter(function (c) {
+      //       return c.numEmployees >= minEmployees
+      //   })
+      //     return res.json({ companies: results });
+      //   }
+      // }
+      // else{
         //if nameLike is not specified:
-      const companies = await Company.findAll();
+      // const companies = await Company.findAll();
       //if maxEmployees is specified
-      if(maxEmployees !== undefined){
+      // if(maxEmployees !== undefined){
       //check if minEmployees is specified
        //if minEmployees is not specified, set it to 0
-      if(minEmployees == undefined){
-        minEmployees = 0;
-      }
-      const results = companies.filter(function (c) {
-        return c.numEmployees >= minEmployees && c.numEmployees <= maxEmployees
-    })
-        return res.json({ companies: results });
-    }else{
+    //   if(minEmployees == undefined){
+    //     minEmployees = 0;
+    //   }
+    //   const results = companies.filter(function (c) {
+    //     return c.numEmployees >= minEmployees && c.numEmployees <= maxEmployees
+    // })
+    //     return res.json({ companies: results });
+    // }else{
       //if maxEmployees is not specified, filter only with minEmployees
-      const results = companies.filter(function (c) {
-        return c.numEmployees >= minEmployees
-    })
-      return res.json({ companies: results });
-    }    
-  }
-  }
-  else{
+  //     const results = companies.filter(function (c) {
+  //       return c.numEmployees >= minEmployees
+  //   })
+  //     return res.json({ companies: results });
+  //   }    
+  // }
+  // }
+  // else{
     //if no query string is added, return all companies
-    const companies = await Company.findAll();
-      return res.json({ companies });
-  }}
-  catch (err) {
+//     const companies = await Company.findAll();
+//       return res.json({ companies });
+//   }}
+//   catch (err) {
+//     return next(err);
+//   }
+// });
+
+
+router.get("/", async function (req, res, next) {
+  const q = req.query;
+  // arrive as strings from querystring, but we want as ints
+  if (q.minEmployees !== undefined) q.minEmployees = +q.minEmployees;
+  if (q.maxEmployees !== undefined) q.maxEmployees = +q.maxEmployees;
+
+  try {
+    const validator = jsonschema.validate(q, companySearchSchema);
+    if (!validator.valid) {
+      const errs = validator.errors.map(e => e.stack);
+      throw new BadRequestError(errs);
+    }
+
+    const companies = await Company.findAll(q);
+    return res.json({ companies });
+  } catch (err) {
     return next(err);
   }
 });
+
+
+
 
 /** GET /[handle]  =>  { company }
  *

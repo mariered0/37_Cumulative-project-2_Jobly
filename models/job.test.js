@@ -8,6 +8,7 @@ const {
   commonBeforeEach,
   commonAfterEach,
   commonAfterAll,
+  testJobIds,
 } = require("./_testCommon");
 
 beforeAll(commonBeforeAll);
@@ -21,43 +22,17 @@ describe("create", () => {
     const newJob = {
         title: "New",
         salary: 999999,
-        equity: '0',
+        equity: '0.1',
         companyHandle: "c1"
     };
 
     test("works", async () => {
         const job = await Job.create(newJob);
-        
-
-        const result = await db.query(
-            `SELECT title, salary, equity, company_handle
-             FROM jobs
-             WHERE title = 'New'`);
         expect(job).toEqual({
-            id: expect.any(Number),
-                title: "New", 
-                salary: 999999, 
-                equity: '0',
-                companyHandle: "c1"
+            ...newJob,
+            id: expect.any(Number)
         });
-        expect(result.rows).toEqual([
-            {
-                title: "New", 
-                salary: 999999, 
-                equity: '0',
-                company_handle: "c1"
-            }]);
     });
-
-    test("bad request with duplicate", async () => {
-        try {
-          await Job.create(newJob);
-          await Job.create(newJob);
-          fail();
-        } catch (err) {
-          expect(err instanceof BadRequestError).toBeTruthy();
-        }
-      });
 })
 
  /************************************** findAll */
@@ -67,25 +42,100 @@ describe("create", () => {
         let jobs = await Job.findAll();
         expect(jobs).toEqual([
             {
-                id: expect.any(Number),
+                id: testJobIds[0],
                 title: "j1", 
                 salary: 999999, 
-                equity: '0',
-                companyHandle: "c1"
+                equity: '0.1',
+                companyHandle: "c1",
+                companyName: "C1"
             },
             {
-                id: expect.any(Number),
+                id: testJobIds[1],
                 title: "j2", 
                 salary: 888888, 
-                equity: '0',
-                companyHandle: "c2"
+                equity: '0.2',
+                companyHandle: "c1",
+                companyName: "C1"
             },
             {
-                id: expect.any(Number),
+                id: testJobIds[2],
                 title: "j3", 
                 salary: 777777, 
                 equity: '0',
-                companyHandle: "c3"
+                companyHandle: "c1",
+                companyName: "C1"
+            },
+            {
+                id: testJobIds[3],
+                title: "j4", 
+                salary: null,
+                equity: null,
+                companyHandle: "c1",
+                companyName: "C1"
+            }
+        ]);
+    });
+
+    test("works: by min salary", async () => {
+        let jobs = await Job.findAll({ minSalary: 999999 });
+        expect(jobs).toEqual([
+            {
+                id: testJobIds[0],
+                title: "j1", 
+                salary: 999999, 
+                equity: '0.1',
+                companyHandle: "c1",
+                companyName: "C1"
+            }
+        ]);
+    });
+
+    test("works: by equity", async () => {
+        let jobs = await Job.findAll({ hasEquity: true });
+        expect(jobs).toEqual([
+            {
+                id: testJobIds[0],
+                title: "j1", 
+                salary: 999999, 
+                equity: '0.1',
+                companyHandle: "c1",
+                companyName: "C1"
+            },
+            {
+                id: testJobIds[1],
+                title: "j2", 
+                salary: 888888, 
+                equity: '0.2',
+                companyHandle: "c1",
+                companyName: "C1"
+            }
+        ])
+    });
+
+    test("works: by min salary & equity", async () => {
+        let jobs = await Job.findAll({ minSalary: 999999, hasEquity: true });
+        expect(jobs).toEqual([
+            {
+                id: testJobIds[0],
+                title: "j1", 
+                salary: 999999, 
+                equity: '0.1',
+                companyHandle: "c1",
+                companyName: "C1"
+            }
+        ]);
+    });
+
+    test("works: by name", async() => {
+        let jobs = await Job.findAll({ title: "j1" });
+        expect(jobs).toEqual([
+            {
+                id: testJobIds[0],
+                title: "j1",
+                salary: 999999, 
+                equity: '0.1',
+                companyHandle: "c1",
+                companyName: "C1"
             }
         ]);
     });
@@ -96,17 +146,19 @@ describe("create", () => {
 
  describe("get", () => {
     test("works", async () => {
-        const id = await db.query(`
-            SELECT id
-            FROM jobs
-            WHERE title = 'j1'`)
-        const job = await Job.get(id.rows[0].id);
+        const job = await Job.get(testJobIds[0]);
         expect(job).toEqual({
-            id: expect.any(Number), 
+            id: testJobIds[0], 
             title: "j1",
             salary: 999999, 
-            equity: '0', 
-            companyHandle: "c1"
+            equity: '0.1', 
+            company: {
+                handle: "c1",
+                name: "C1",
+                description: "Desc1",
+                numEmployees: 1,
+                logoUrl: "http://c1.img"
+            }
         })
     });
 
@@ -123,13 +175,13 @@ describe("create", () => {
 
  /************************************** filterByName */
 
- describe("filterByTitle", () => {
-    test("works", async () => {
-        const jobs = await Job.filterByTitle("j3");
-        expect(jobs).toHaveLength(1);
-    });
+//  describe("filterByTitle", () => {
+//     test("works", async () => {
+//         const jobs = await Job.filterByTitle("j3");
+//         expect(jobs).toHaveLength(1);
+//     });
 
- })
+//  })
 
  /************************************** update */
 
@@ -141,15 +193,11 @@ describe("create", () => {
     };
 
     test("works", async () => {
-        const id = await db.query(`
-            SELECT id
-            FROM jobs
-            WHERE title = 'j1'`);
-        const job = await Job.update(id.rows[0].id, updateData);
+        const job = await Job.update(testJobIds[0], updateData);
         expect(job).toEqual({
-            id: id.rows[0].id,
+            id: testJobIds[0],
             companyHandle: "c1",
-            equity: "0",
+            equity: "0.1",
             title: "new job",
             salary: 999999
         });
@@ -157,32 +205,27 @@ describe("create", () => {
         const result = await db.query(
             `SELECT id, title, salary, equity, company_handle AS companyHandle
              FROM jobs
-             WHERE id = ${id.rows[0].id}`);
+             WHERE id = ${testJobIds[0]}`);
         expect(result.rows).toEqual([{
-            id: expect.any(Number),
+            id: testJobIds[0],
             title: 'new job',
             salary: 999999,
-            equity: '0',
+            equity: '0.1',
             companyhandle: 'c1'
         }]);
 
     })
 
     test("works: null field", async () => {
-        const id = await db.query(`
-            SELECT id
-            FROM jobs
-            WHERE title = 'j1'`);
-
         const updateDataSetNulls = {
             title: "New",
             salary: null,
             equity: null
         };
 
-        const job = await Job.update(id.rows[0].id, updateDataSetNulls);
+        const job = await Job.update(testJobIds[0], updateDataSetNulls);
         expect(job).toEqual({
-            id: id.rows[0].id,
+            id: testJobIds[0],
             companyHandle: "c1",
             ...updateDataSetNulls
         });
@@ -190,10 +233,10 @@ describe("create", () => {
         const result = await db.query(
             `SELECT id, title, salary, equity, company_handle AS companyHandle
              FROM jobs
-             WHERE id = ${id.rows[0].id}`);
+             WHERE id = ${testJobIds[0]}`);
 
         expect(result.rows).toEqual([{
-            id: id.rows[0].id,
+            id: testJobIds[0],
             title: "New",
             salary: null,
             equity: null,

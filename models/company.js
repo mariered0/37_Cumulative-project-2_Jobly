@@ -120,7 +120,7 @@ class Company {
     return company;
   }
 //####################################
-// methods for filtering
+// methods for filtering - my code
 //####################################
 
   /** filter by company name.
@@ -132,23 +132,23 @@ class Company {
    * Throws NotFoundError if not found.
    */
 
-  static async filterByName(searchWord) {
-    const results = await db.query(
-      `SELECT handle,
-              name,
-              description,
-              num_employees AS "numEmployees",
-              logo_url AS "logoUrl"
-       FROM companies
-       WHERE name ILIKE '%${searchWord}%'`
-    );
+  // static async filterByName(searchWord) {
+  //   const results = await db.query(
+  //     `SELECT handle,
+  //             name,
+  //             description,
+  //             num_employees AS "numEmployees",
+  //             logo_url AS "logoUrl"
+  //      FROM companies
+  //      WHERE name ILIKE '%${searchWord}%'`
+  //   );
 
-    if (results.rows.length === 0) {
-      throw new NotFoundError(`No company found with the keyword: ${searchWord}`)
-    };
+  //   if (results.rows.length === 0) {
+  //     throw new NotFoundError(`No company found with the keyword: ${searchWord}`)
+  //   };
 
-    return results.rows;
-  }
+  //   return results.rows;
+  // }
 
 
 

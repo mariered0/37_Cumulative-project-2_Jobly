@@ -7,11 +7,13 @@ const express = require("express");
 
 
 const { BadRequestError } = require("../expressError");
-const { ensureLoggedIn, ensureAdmin } = require("../middleware/auth");
+const { ensureAdmin } = require("../middleware/auth");
 const Job = require("../models/job");
 
 const jobNewSchema = require("../schemas/jobNew.json");
 const jobUpdateSchema = require("../schemas/jobUpdate.json");
+const jobSearchSchema = require("../schemas/jobSearch.json");
+
 
 const router = new express.Router();
 
@@ -25,7 +27,7 @@ const router = new express.Router();
  * Authorization required: login
  */
 
-router.post("/", ensureLoggedIn, ensureAdmin, async (req, res, next) => {
+router.post("/", ensureAdmin, async (req, res, next) => {
     try{
         const validator = jsonschema.validate(req.body, jobNewSchema);
         if (!validator.valid) {
@@ -50,65 +52,90 @@ router.post("/", ensureLoggedIn, ensureAdmin, async (req, res, next) => {
  * 
  * Authorization required: none
  */
-router.get("/", async (req, res, next) => {
-    try{
+
+//my original solution
+// router.get("/", async (req, res, next) => {
+//     try{
         //check if there's any query strings, if not, send all companies information
-        if (Object.keys(req.query).length !== 0){
-            const { titleLike } = req.query
-            let { minSalary, hasEquity } = req.query
+        // if (Object.keys(req.query).length !== 0){
+        //     const { titleLike } = req.query
+        //     let { minSalary, hasEquity } = req.query
 
             //Check if titleLike is specified in query string:
-            if(titleLike !== undefined){
+            // if(titleLike !== undefined){
                 //if titleLike is specified:
                 //Check if hasEquity is specified:
                 
-                if (hasEquity !== undefined || hasEquity === true){
+                // if (hasEquity !== undefined || hasEquity === true){
                     // hasEquity = true;
-                    if(minSalary === undefined) minSalary = 0;
+                    // if(minSalary === undefined) minSalary = 0;
                         //regardless minSalary is specified or not, run this
-                        const jobs = await Job.filterByTitle(`${titleLike}`);
-                        const results = jobs.filter(function (j) {
-                            return j.salary >= minSalary && parseFloat(j.equity) > 0
-                        })
-                        return res.json({ jobs: results });
-                }//if hasEquity is noe specified (=== undefined) or false, filter with titleLike & minSalary
-                else{
-                    if(minSalary === undefined) minSalary = 0;
-                    const jobs = await Job.filterByTitle(`${titleLike}`);
-                    const results = jobs.filter(function (j) {
-                        return j.salary >= minSalary;
-                    })
-                    return res.json({ jobs: results });
-                }
-            }else {
+                //         const jobs = await Job.filterByTitle(`${titleLike}`);
+                //         const results = jobs.filter(function (j) {
+                //             return j.salary >= minSalary && parseFloat(j.equity) > 0
+                //         })
+                //         return res.json({ jobs: results });
+                // }
+                //if hasEquity is noe specified (=== undefined) or false, filter with titleLike & minSalary
+            //     else{
+            //         if(minSalary === undefined) minSalary = 0;
+            //         const jobs = await Job.filterByTitle(`${titleLike}`);
+            //         const results = jobs.filter(function (j) {
+            //             return j.salary >= minSalary;
+            //         })
+            //         return res.json({ jobs: results });
+            //     }
+            // }else {
                 //if titleLike is not specified:
-                const jobs = await Job.findAll();
+                // const jobs = await Job.findAll();
 
                 //if hasEquity is specified:
-                if(hasEquity !== undefined || hasEquity === true){
-                    if(minSalary === undefined) minSalary = 0;
-                    const results = jobs.filter(function (j) {
-                        return j.salary >= minSalary && parseFloat(j.equity) > 0
-                    })
-                    return res.json({ jobs: results });
-                }else{
+                // if(hasEquity !== undefined || hasEquity === true){
+                //     if(minSalary === undefined) minSalary = 0;
+                //     const results = jobs.filter(function (j) {
+                //         return j.salary >= minSalary && parseFloat(j.equity) > 0
+                //     })
+                //     return res.json({ jobs: results });
+                // }else{
                     //if hasEquity is not specified or false, filter with findAll & minSalary
-                    const results = jobs.filter(function (j) {
-                        return j.salary >= minSalary;
-                    })
-                    return res.json({ jobs: results });
-                }
-            }
-        }
+        //             const results = jobs.filter(function (j) {
+        //                 return j.salary >= minSalary;
+        //             })
+        //             return res.json({ jobs: results });
+        //         }
+        //     }
+        // }
         //if no query string is added, return all jobs
-        else{
-            const jobs = await Job.findAll();
-             return res.json({ jobs });
-        }
-    }catch (err) {
-        return next (err);
+//         else{
+//             const jobs = await Job.findAll();
+//              return res.json({ jobs });
+//         }
+//     }catch (err) {
+//         return next (err);
+//     }
+// })
+
+router.get("/", async function (req, res, next) {
+  const q = req.query;
+  // arrive as strings from querystring, but we want as int/bool
+  if (q.minSalary !== undefined) q.minSalary = +q.minSalary;
+  q.hasEquity = q.hasEquity === "true";
+
+  try {
+    const validator = jsonschema.validate(q, jobSearchSchema);
+    if (!validator.valid) {
+      const errs = validator.errors.map(e => e.stack);
+      throw new BadRequestError(errs);
     }
-})
+
+    const jobs = await Job.findAll(q);
+    return res.json({ jobs });
+  } catch (err) {
+    return next(err);
+  }
+});
+
+
 
 
 /** GET /[id]  =>  { job }
@@ -139,7 +166,7 @@ router.get("/", async (req, res, next) => {
  * Authorization required: login
 */
 
-router.patch("/:id", ensureLoggedIn, ensureAdmin, async function (req, res, next) {
+router.patch("/:id", ensureAdmin, async function (req, res, next) {
     try {
       const validator = jsonschema.validate(req.body, jobUpdateSchema);
       if (!validator.valid) {
@@ -159,7 +186,7 @@ router.patch("/:id", ensureLoggedIn, ensureAdmin, async function (req, res, next
  * Authorization: login
  */
 
- router.delete("/:id", ensureLoggedIn, ensureAdmin, async function (req, res, next) {
+ router.delete("/:id", ensureAdmin, async function (req, res, next) {
     try {
       await Job.remove(req.params.id);
       return res.json({ deleted: req.params.id });

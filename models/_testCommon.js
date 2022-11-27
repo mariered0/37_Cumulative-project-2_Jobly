@@ -3,12 +3,14 @@ const bcrypt = require("bcrypt");
 const db = require("../db.js");
 const { BCRYPT_WORK_FACTOR } = require("../config");
 
+const testJobIds = [];
+
 async function commonBeforeAll() {
   // noinspection SqlWithoutWhere
   await db.query("DELETE FROM companies");
   // noinspection SqlWithoutWhere
   await db.query("DELETE FROM users");
-  // noinspection SqlWithoutWhere
+
   await db.query("DELETE FROM jobs");
   await db.query("DELETE FROM applications")
 
@@ -32,15 +34,17 @@ async function commonBeforeAll() {
         await bcrypt.hash("password2", BCRYPT_WORK_FACTOR),
       ]);
 
-  await db.query(`
+  const resultsJobs = await db.query(`
         INSERT INTO jobs(title,
                          salary,
                          equity,
                          company_handle)
-        VALUES ('j1', 999999, 0, 'c1'),
-               ('j2', 888888, 0, 'c2'),
-               ('j3', 777777, 0, 'c3')
-        RETURNING title`);
+        VALUES ('j1', 999999, 0.1, 'c1'),
+               ('j2', 888888, 0.2, 'c1'),
+               ('j3', 777777, 0, 'c1'),
+               ('j4', NULL, NULL, 'c1')
+        RETURNING id`);
+  testJobIds.splice(0, 0, ...resultsJobs.rows.map(r => r.id));
 
   // const id1 = await db.query(
   //         `SELECT id, title
@@ -53,12 +57,11 @@ async function commonBeforeAll() {
   //          WHERE title ILIKE '%j2%'`
   //     );
 
-  // await db.query(`
-  //       INSERT INTO applications(username,
-  //                               job_id)
-  //       VALUES ('u1', ${id1.rows[0].id}),
-  //              ('u2', ${id2.rows[0].id})
-  //       RETURNING job_id`);
+  await db.query(`
+        INSERT INTO applications(username,
+                                job_id)
+        VALUES ('u1', $1)`,
+        [testJobIds[0]]);
 }
 
 async function commonBeforeEach() {
@@ -79,4 +82,5 @@ module.exports = {
   commonBeforeEach,
   commonAfterEach,
   commonAfterAll,
+  testJobIds
 };
